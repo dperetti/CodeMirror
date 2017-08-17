@@ -101,6 +101,7 @@ export function Display(place, doc, input) {
   d.selForContextMenu = null
 
   d.activeTouch = null
+  d.scrollWheelDisabled = false
 
   input.init(d)
 }

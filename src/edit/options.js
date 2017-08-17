@@ -153,6 +153,11 @@ export function defineOptions(CodeMirror) {
   option("tabindex", null, (cm, val) => cm.display.input.getField().tabIndex = val || "")
   option("autofocus", null)
   option("direction", "ltr", (cm, val) => cm.doc.setDirection(val), true)
+
+  option("disableScrollWheel", false, function(cm, disabled) {
+    cm.display.scrollWheelDisabled = disabled;    
+    cm.display.scroller.setAttribute('style', disabled ? 'overflow: hidden !important' : '');
+  });
 }
 
 function guttersChanged(cm) {

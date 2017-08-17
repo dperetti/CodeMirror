@@ -40,6 +40,8 @@ export function wheelEventPixels(e) {
 }
 
 export function onScrollWheel(cm, e) {
+  // scrollWheel could have been disabled with option("disableScroll", val)    
+  if (cm.display.scrollWheelDisabled) return;
   let delta = wheelEventDelta(e), dx = delta.x, dy = delta.y
 
   let display = cm.display, scroll = display.scroller
