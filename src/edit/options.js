@@ -157,6 +157,12 @@ export function defineOptions(CodeMirror) {
   option("autofocus", null)
   option("direction", "ltr", (cm, val) => cm.doc.setDirection(val), true)
   option("phrases", null)
+
+  option("disableScrollWheel", false, function(cm, disabled) {
+    cm.display.scrollWheelDisabled = disabled;
+    cm.display.scroller.setAttribute('style', disabled ? 'overflow: hidden !important' : '');
+  });
+
 }
 
 function dragDropChanged(cm, value, old) {
