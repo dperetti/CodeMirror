@@ -1,5 +1,5 @@
 // CodeMirror, copyright (c) by Marijn Haverbeke and others
-// Distributed under an MIT license: http://codemirror.net/LICENSE
+// Distributed under an MIT license: https://codemirror.net/LICENSE
 
 (function() {
   var config = {tabSize: 4, indentUnit: 2}
@@ -45,6 +45,8 @@
       "formatting" : "override-formatting"
   }});
   function FormatTokenTypeOverrideTest(name) { test.mode(name, modeFormattingOverride, Array.prototype.slice.call(arguments, 1)); }
+  var modeET = CodeMirror.getMode(config, {name: "markdown", emoji: true});
+  function ET(name) { test.mode(name, modeET, Array.prototype.slice.call(arguments, 1)); }
 
 
   FT("formatting_emAsterisk",
@@ -151,6 +153,21 @@
      "Foo",
      "    Bar");
 
+  MT("codeBlocksAfterATX",
+     "[header&header-1 # foo]",
+     "    [comment code]");
+
+  MT("codeBlocksAfterSetext",
+     "[header&header-2 foo]",
+     "[header&header-2 ---]",
+     "    [comment code]");
+
+  MT("codeBlocksAfterFencedCode",
+     "[comment ```]",
+     "[comment foo]",
+     "[comment ```]",
+     "    [comment code]");
+
   // Inline code using backticks
   MT("inlineCodeUsingBackticks",
      "foo [comment `bar`]");
@@ -191,6 +208,10 @@
   // Closed with several different groups of backticks
   MT("closedBackticks",
      "[comment ``foo ``` bar` hello``] world");
+
+  // info string cannot contain backtick, thus should result in inline code
+  MT("closingFencedMarksOnSameLine",
+     "[comment ``` code ```] foo");
 
   // atx headers
   // http://daringfireball.net/projects/markdown/syntax#header
@@ -237,7 +258,7 @@
 
   MT("atxIndentedTooMuch",
      "[header&header-1 # foo]",
-     "    # bar");
+     "    [comment # bar]");
 
   // disable atx inside blockquote until we implement proper blockquote inner mode
   // TODO: fix to be CommonMark-compliant
@@ -265,10 +286,12 @@
      "[header&header-1 foo]",
      "[header&header-1 ===]");
 
-  // Check if single underlining - works
-  MT("setextH2",
-     "[header&header-2 foo]",
-     "[header&header-2 -]");
+  // Check if single underlining - should not be interpreted
+  // as it might lead to an empty list:
+  // https://spec.commonmark.org/0.28/#setext-heading-underline
+  MT("setextH2Single",
+     "foo",
+     "-");
 
   // Check if 3+ -'s work
   MT("setextH2",
@@ -308,11 +331,41 @@
 
   MT("noSetextAfterList",
      "[variable-2 - foo]",
-     "[hr ---]",
-     "",
+     "[hr ---]");
+
+  MT("noSetextAfterList_listContinuation",
      "[variable-2 - foo]",
      "bar",
      "[hr ---]");
+
+  MT("setextAfterList_afterIndentedCode",
+     "[variable-2 - foo]",
+     "",
+     "      [comment bar]",
+     "[header&header-2 baz]",
+     "[header&header-2 ---]");
+
+  MT("setextAfterList_afterFencedCodeBlocks",
+     "[variable-2 - foo]",
+     "",
+     "      [comment ```]",
+     "      [comment bar]",
+     "      [comment ```]",
+     "[header&header-2 baz]",
+     "[header&header-2 ---]");
+
+  MT("setextAfterList_afterHeader",
+     "[variable-2 - foo]",
+     "  [variable-2&header&header-1 # bar]",
+     "[header&header-2 baz]",
+     "[header&header-2 ---]");
+
+  MT("setextAfterList_afterHr",
+     "[variable-2 - foo]",
+     "",
+     "  [hr ---]",
+     "[header&header-2 bar]",
+     "[header&header-2 ---]");
 
   MT("setext_nestedInlineMarkup",
      "[header&header-1 foo ][em&header&header-1 *bar*]",
@@ -328,6 +381,12 @@
      "foo",
      "[header&header-1 bar]",
      "[header&header-1 =]");
+
+  // ensure we regard space after a single dash as a list
+  MT("setext_emptyList",
+     "foo",
+     "[variable-2 - ]",
+     "foo");
 
   // Single-line blockquote with trailing space
   MT("blockquoteSpace",
@@ -1100,6 +1159,39 @@
      "[comment ```]",
      "baz");
 
+  MT("fencedCodeBlocks_invalidClosingFence_trailingText",
+     "[comment ```]",
+     "[comment foo]",
+     "[comment ``` must not have trailing text]",
+     "[comment baz]");
+
+  MT("fencedCodeBlocks_invalidClosingFence_trailingTabs",
+     "[comment ```]",
+     "[comment foo]",
+     "[comment ```\t]",
+     "[comment baz]");
+
+  MT("fencedCodeBlocks_validClosingFence",
+     "[comment ```]",
+     "[comment foo]",
+     // may have trailing spaces
+     "[comment ```     ]",
+     "baz");
+
+  MT("fencedCodeBlocksInList_closingFenceIndented",
+     "[variable-2 - list]",
+     "    [variable-2&comment ```]",
+     "    [comment foo]",
+     "     [variable-2&comment ```]",
+     "    [variable-2 baz]");
+
+  MT("fencedCodeBlocksInList_closingFenceIndentedTooMuch",
+     "[variable-2 - list]",
+     "    [variable-2&comment ```]",
+     "    [comment foo]",
+     "      [comment ```]",
+     "    [comment baz]");
+
   MT("fencedCodeBlockModeSwitching",
      "[comment ```javascript]",
      "[variable foo]",
@@ -1195,7 +1287,33 @@
      "[tag&bracket <][tag div][tag&bracket >]",
      "[tag&bracket </][tag div][tag&bracket >]");
 
+  MT("xmlModeLineBreakInTags",
+     "[tag&bracket <][tag div] [attribute id]=[string \"1\"]",
+     "     [attribute class]=[string \"sth\"][tag&bracket >]xxx",
+     "[tag&bracket </][tag div][tag&bracket >]");
+
+  MT("xmlModeCommentWithBlankLine",
+     "[comment <!-- Hello]",
+     "",
+     "[comment World -->]");
+
+  MT("xmlModeCDATA",
+     "[atom <![CDATA[ Hello]",
+     "",
+     "[atom FooBar]",
+     "[atom Test ]]]]>]");
+
+  MT("xmlModePreprocessor",
+     "[meta <?php] [meta echo '1234'; ?>]");
+
   MT_noXml("xmlHighlightDisabled",
      "<div>foo</div>");
 
+  // Tests Emojis
+
+  ET("emojiDefault",
+    "[builtin :foobar:]");
+
+  ET("emojiTable",
+    " :--:");
 })();
